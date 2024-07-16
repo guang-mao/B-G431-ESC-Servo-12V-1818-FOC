@@ -1,0 +1,32 @@
+# 不得省略
+!*.uvprojx
+!*.h
+!*.c
+!*.axf
+!*.bin
+!*.hex
+!*.ioc
+
+# 省略
+version.h
+*.rar
+*.o
+*.d
+*.crf
+*.htm
+*.dep
+*.map
+*.bak
+*.lnp
+*.lst
+*.ini
+*.iex
+
+*.scvd
+*.uvguix
+*.dbg*
+*.uvguix.*
+
+RTE/
+B-G431-ESC-Servo-12V-1818-FOC/
+DebugConfig/
