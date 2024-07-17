@@ -1,6 +1,6 @@
 #include "HallSensor.h"
 
-#define HALL_PHASE_SHIFT		180
+#define HALL_PHASE_SHIFT		174
 
 #define LOW_RES_THRESHOLD   ((uint16_t)0x5500U)
 
@@ -42,7 +42,7 @@ HALL_Handle_t HALL_M1 =
     .DPPConvFactor                     =  ( 65536 / 1 ),
   },
   .SensorPlacement     = DEGREES_120,
-  .PhaseShift          = (int16_t)( HALL_PHASE_SHIFT * 65536 / 360 ),
+  .PhaseShift          = (int16_t) ( HALL_PHASE_SHIFT * 65536 / 360 ),
   .SpeedSamplingFreqHz = 1000,
   .SpeedBufferSize     = 8,
 	.TIMClockFreq        = 170000000uL,
@@ -53,10 +53,10 @@ HALL_Handle_t HALL_M1 =
 	.PWMFreqScaling      = 1,
 	.HallMtpa            = false,
 
-	.H1Port             =  M1_HALL_H1_GPIO_Port,
-	.H1Pin              =  M1_HALL_H1_Pin,
-	.H2Port             =  M1_HALL_H2_GPIO_Port,
-	.H2Pin              =  M1_HALL_H2_Pin,
+	.H1Port             =  M1_HALL_H2_GPIO_Port,
+	.H1Pin              =  M1_HALL_H2_Pin,
+	.H2Port             =  M1_HALL_H1_GPIO_Port,
+	.H2Pin              =  M1_HALL_H1_Pin,
 	.H3Port             =  M1_HALL_H3_GPIO_Port,
 	.H3Pin              =  M1_HALL_H3_Pin,
 
@@ -95,8 +95,8 @@ __weak void HALL_Init(HALL_Handle_t *pHandle)
     /* SW Init */
     if (0U == hMinReliableElSpeedUnit)
     {
-      /* Set fixed to 50 ms */
-      pHandle->HallTimeout = 50U;
+      /* Set fixed to 150 ms */
+      pHandle->HallTimeout = 150U;
     }
     else
     {
@@ -244,17 +244,21 @@ __weak int16_t HALL_CalcElAngle(HALL_Handle_t *pHandle)
   else
   {
 #endif
-    if (pHandle->_Super.hElSpeedDpp != HALL_MAX_PSEUDO_SPEED)
+//    if (pHandle->_Super.hElSpeedDpp != HALL_MAX_PSEUDO_SPEED)
+		if ( pHandle->AvrElSpeedDpp != HALL_MAX_PSEUDO_SPEED )
     {
-      pHandle->MeasuredElAngle += pHandle->_Super.hElSpeedDpp;
-      pHandle->_Super.hElAngle += pHandle->_Super.hElSpeedDpp + pHandle->CompSpeed;
-      pHandle->PrevRotorFreq = pHandle->_Super.hElSpeedDpp;
+      pHandle->MeasuredElAngle += pHandle->AvrElSpeedDpp;//pHandle->_Super.hElSpeedDpp;
+//      pHandle->_Super.hElAngle += pHandle->_Super.hElSpeedDpp + pHandle->CompSpeed;
+//      pHandle->PrevRotorFreq = pHandle->_Super.hElSpeedDpp;
+			pHandle->PrevRotorFreq = pHandle->AvrElSpeedDpp;
     }
     else
     {
-      pHandle->_Super.hElAngle += pHandle->PrevRotorFreq;
+			pHandle->MeasuredElAngle += pHandle->PrevRotorFreq;
+//      pHandle->_Super.hElAngle += pHandle->PrevRotorFreq;
     }
-    retValue = pHandle->_Super.hElAngle;
+		retValue = pHandle->MeasuredElAngle;
+//    retValue = pHandle->_Super.hElAngle;
 #ifdef NULL_PTR_CHECK_HALL_SPD_POS_FDB
   }
 #endif
@@ -373,7 +377,7 @@ __weak void *HALL_TIMx_CC_IRQHandler(void *pHandleVoid)
   TIM_TypeDef *TIMx = pHandle->TIMx;
   uint8_t bPrevHallState;
   int8_t PrevDirection;
-
+	
   if ( pHandle->SensorIsReliable )
   {
     /* A capture event generated this interrupt */
@@ -400,17 +404,16 @@ __weak void *HALL_TIMx_CC_IRQHandler(void *pHandleVoid)
         if (STATE_4 == bPrevHallState)
         {
           pHandle->Direction = POSITIVE;
-          pHandle->MeasuredElAngle = pHandle->PhaseShift;
         }
         else if (STATE_1 == bPrevHallState)
         {
           pHandle->Direction = NEGATIVE;
-          pHandle->MeasuredElAngle = (int16_t)(pHandle->PhaseShift + S16_60_PHASE_SHIFT);
 				}
         else
         {
           /* Nothing to do */
         }
+				pHandle->MeasuredElAngle = (int16_t) ( pHandle->PhaseShift + ( S16_60_PHASE_SHIFT / 2 ) );
         break;
       }
 
@@ -419,17 +422,16 @@ __weak void *HALL_TIMx_CC_IRQHandler(void *pHandleVoid)
         if (STATE_5 == bPrevHallState)
         {
           pHandle->Direction = POSITIVE;
-          pHandle->MeasuredElAngle = pHandle->PhaseShift + S16_60_PHASE_SHIFT;
 				}
         else if (STATE_3 == bPrevHallState)
         {
           pHandle->Direction = NEGATIVE;
-          pHandle->MeasuredElAngle = (int16_t)(pHandle->PhaseShift + S16_120_PHASE_SHIFT);
 				}
         else
         {
           /* Nothing to do */
         }
+				pHandle->MeasuredElAngle = (int16_t) ( pHandle->PhaseShift + S16_60_PHASE_SHIFT + ( S16_60_PHASE_SHIFT / 2 ) );
         break;
       }
 
@@ -438,17 +440,16 @@ __weak void *HALL_TIMx_CC_IRQHandler(void *pHandleVoid)
         if (STATE_1 == bPrevHallState)
         {
           pHandle->Direction = POSITIVE;
-          pHandle->MeasuredElAngle = (int16_t)(pHandle->PhaseShift + S16_120_PHASE_SHIFT);
 				}
         else if (STATE_2 == bPrevHallState)
         {
           pHandle->Direction = NEGATIVE;
-          pHandle->MeasuredElAngle = (int16_t)(pHandle->PhaseShift + S16_120_PHASE_SHIFT + S16_60_PHASE_SHIFT);
         }
         else
         {
           /* Nothing to do */
         }
+				pHandle->MeasuredElAngle = (int16_t) ( pHandle->PhaseShift + S16_120_PHASE_SHIFT + ( S16_60_PHASE_SHIFT / 2 ) );
         break;
       }
 
@@ -457,17 +458,16 @@ __weak void *HALL_TIMx_CC_IRQHandler(void *pHandleVoid)
         if (STATE_3 == bPrevHallState)
         {
           pHandle->Direction = POSITIVE;
-          pHandle->MeasuredElAngle = (int16_t)(pHandle->PhaseShift + S16_120_PHASE_SHIFT + S16_60_PHASE_SHIFT);
 				}
         else if (STATE_6 == bPrevHallState)
         {
           pHandle->Direction = NEGATIVE;
-          pHandle->MeasuredElAngle = (int16_t)(pHandle->PhaseShift - S16_120_PHASE_SHIFT);
 				}
         else
         {
           /* Nothing to do */
         }
+				pHandle->MeasuredElAngle = (int16_t) ( pHandle->PhaseShift - S16_120_PHASE_SHIFT - ( S16_60_PHASE_SHIFT / 2 ) );
         break;
       }
 
@@ -476,17 +476,16 @@ __weak void *HALL_TIMx_CC_IRQHandler(void *pHandleVoid)
         if (STATE_2 == bPrevHallState)
         {
           pHandle->Direction = POSITIVE;
-          pHandle->MeasuredElAngle = (int16_t)(pHandle->PhaseShift - S16_120_PHASE_SHIFT);
 				}
         else if (STATE_4 == bPrevHallState)
         {
           pHandle->Direction = NEGATIVE;
-          pHandle->MeasuredElAngle = (int16_t)(pHandle->PhaseShift - S16_60_PHASE_SHIFT);
 				}
         else
         {
           /* Nothing to do */
         }
+				pHandle->MeasuredElAngle = (int16_t) ( pHandle->PhaseShift - S16_60_PHASE_SHIFT - ( S16_60_PHASE_SHIFT / 2 ) );
         break;
       }
 
@@ -495,17 +494,16 @@ __weak void *HALL_TIMx_CC_IRQHandler(void *pHandleVoid)
         if (STATE_6 == bPrevHallState)
         {
           pHandle->Direction = POSITIVE;
-          pHandle->MeasuredElAngle = (int16_t)(pHandle->PhaseShift - S16_60_PHASE_SHIFT);
 				}
         else if (STATE_5 == bPrevHallState)
         {
           pHandle->Direction = NEGATIVE;
-          pHandle->MeasuredElAngle = (int16_t)(pHandle->PhaseShift);
         }
         else
         {
           /* Nothing to do */
         }
+				pHandle->MeasuredElAngle = (int16_t) ( pHandle->PhaseShift - ( S16_60_PHASE_SHIFT / 2 ) );
         break;
       }
 
@@ -520,7 +518,7 @@ __weak void *HALL_TIMx_CC_IRQHandler(void *pHandleVoid)
        If it is the case, the sign of the current speed can be the opposite of the
        average speed, and the average time can be close to 0 which lead to a
        computed speed close to the infinite, and bring instability. */
-    if (pHandle->Direction != PrevDirection)
+    if ( pHandle->Direction != PrevDirection )
     {
       /* Setting BufferFilled to 0 will prevent to compute the average speed based
        on the SpeedPeriod buffer values */
@@ -528,7 +526,8 @@ __weak void *HALL_TIMx_CC_IRQHandler(void *pHandleVoid)
       pHandle->SpeedFIFOIdx = 0U;
     }
 
-    if (true == pHandle->HallMtpa)
+		#if 0
+    if ( true == pHandle->HallMtpa )
     {
       pHandle->_Super.hElAngle = pHandle->MeasuredElAngle;
     }
@@ -536,9 +535,10 @@ __weak void *HALL_TIMx_CC_IRQHandler(void *pHandleVoid)
     {
       /* Nothing to do */
     }
+		#endif
 
     /* Discard first capture */
-    if (0U == pHandle->FirstCapt)
+    if ( 0U == pHandle->FirstCapt )
     {
       pHandle->FirstCapt++;
       (void)LL_TIM_IC_GetCaptureCH1(TIMx);
@@ -546,7 +546,7 @@ __weak void *HALL_TIMx_CC_IRQHandler(void *pHandleVoid)
     else
     {
       /* used to validate the average speed measurement */
-      if (pHandle->BufferFilled < pHandle->SpeedBufferSize)
+      if ( pHandle->BufferFilled < pHandle->SpeedBufferSize )
       {
         pHandle->BufferFilled++;
       }
@@ -563,6 +563,7 @@ __weak void *HALL_TIMx_CC_IRQHandler(void *pHandleVoid)
       /* Add the numbers of overflow to the counter */
       wCaptBuf += ((uint32_t)pHandle->OVFCounter) * 0x10000UL;
 
+			// 
       if (pHandle->OVFCounter != 0U)
       {
         /* Adjust the capture using prescaler */

@@ -61,7 +61,9 @@ extern DMA_HandleTypeDef hdma_usart2_rx;
 extern DMA_HandleTypeDef hdma_usart2_tx;
 extern UART_HandleTypeDef huart2;
 /* USER CODE BEGIN EV */
-uint8_t pwm_duty_cycle = 10u;
+
+int16_t setpoint = 10000;
+
 alphabeta_t Valphabeta;
 Vabc_t	Vabc;
 uint16_t CCR1, CCR2, CCR3;
@@ -192,7 +194,7 @@ void SysTick_Handler(void)
   /* USER CODE BEGIN SysTick_IRQn 0 */
 
 	/* Executes the Medium Frequency Task functions for each drive instance */
-	MC_Scheduler();
+//	MC_Scheduler();
 	
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();
@@ -245,20 +247,21 @@ void TIM1_UP_TIM16_IRQHandler(void)
 	
 	if ( LL_TIM_IsActiveFlag_UPDATE(TIM1) && LL_TIM_IsEnabledIT_UPDATE(TIM1) )
 	{
+		HAL_GPIO_WritePin(STATUS_GPIO_Port, STATUS_Pin, GPIO_PIN_SET);
+		
 		LL_TIM_ClearFlag_UPDATE(TIM1);
-		
-		qd_t Vqd;
-		
-		
 		
 		(void)HALL_CalcElAngle(&HALL_M1);
 		
 		if ( bootstage >= ENDPLACE )
 		{
+			qd_t Vqd;
+			
 			Vabc_t Vtmp;
 			
 			int16_t half_ARR = ( motor_data.M_TIMx->ARR + 1 ) / 2;
-			int16_t center = (int16_t) 0; // ( motor_data.M_TIMx->ARR + 1 ) / 2;
+			
+			int16_t center = 0;
 			
 			#if 0
 			uint8_t tmp = ( pwm_duty_cycle > 100 ) ? 100 : pwm_duty_cycle;	
@@ -267,9 +270,7 @@ void TIM1_UP_TIM16_IRQHandler(void)
 			BlockCommutate(&motor_data);
 			#endif
 			
-			HAL_GPIO_WritePin(STATUS_GPIO_Port, STATUS_Pin, GPIO_PIN_SET);
-			
-			Vqd.q = 1024;
+			Vqd.q = setpoint;
 			Vqd.d = 0;
 			
 			Valphabeta = MCM_Rev_Park(Vqd, HALL_M1.MeasuredElAngle);
@@ -294,12 +295,11 @@ void TIM1_UP_TIM16_IRQHandler(void)
 			CCR2 = ( ( Vabc.b * half_ARR ) >> 15 ) + half_ARR;
 			CCR3 = ( ( Vabc.c * half_ARR ) >> 15 ) + half_ARR;
 			
-			motor_data.M_TIMx->CCR1 = CCR3; //123 132 213 231 321
-			motor_data.M_TIMx->CCR2 = CCR1;
-			motor_data.M_TIMx->CCR3 = CCR2;
-			
-			HAL_GPIO_WritePin(STATUS_GPIO_Port, STATUS_Pin, GPIO_PIN_RESET);
+			LL_TIM_OC_SetCompareCH1(motor_data.M_TIMx, CCR1);
+			LL_TIM_OC_SetCompareCH2(motor_data.M_TIMx, CCR2);
+			LL_TIM_OC_SetCompareCH3(motor_data.M_TIMx, CCR3);
 		}
+		HAL_GPIO_WritePin(STATUS_GPIO_Port, STATUS_Pin, GPIO_PIN_RESET);
 	}
   /* USER CODE END TIM1_UP_TIM16_IRQn 0 */
   /* USER CODE BEGIN TIM1_UP_TIM16_IRQn 1 */

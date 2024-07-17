@@ -28,13 +28,14 @@ void Motor_init(MOTOR_TYPE_t *pMotor, TIM_TypeDef *M_TIMx)
 	
 	LL_TIM_EnableCounter(pMotor->M_TIMx);
 
+	#if 1
 	LL_TIM_OC_SetCompareCH1(pMotor->M_TIMx, 0u);
 	LL_TIM_OC_SetCompareCH2(pMotor->M_TIMx, 0u);
 	LL_TIM_OC_SetCompareCH3(pMotor->M_TIMx, 0u);
 	LL_TIM_CC_EnableChannel(pMotor->M_TIMx, LL_TIM_CHANNEL_CH1 | LL_TIM_CHANNEL_CH1N | LL_TIM_CHANNEL_CH2 | LL_TIM_CHANNEL_CH2N | LL_TIM_CHANNEL_CH3 | LL_TIM_CHANNEL_CH3N);
-//	pMotor->M_TIMx->CCER = DISABLE_PWM;
+	#else
+	pMotor->M_TIMx->CCER = DISABLE_PWM;
 	
-	#if 0
 	/* Select the Capture Compare preload feature */
   pMotor->M_TIMx->CR2 |= TIM_CR2_CCPC;
 	
